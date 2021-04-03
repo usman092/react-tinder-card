@@ -140,20 +140,22 @@ const dragableTouchmove = (
   const rotCalc = calcSpeed(lastLocation, newLocation).x / 1000;
   const rotation = rotationString(rotCalc * settings.maxTilt);
   if (
+    (Math.abs(newLocation.x - lastLocation.x) >
+      Math.abs(coordinates.y + offset.y - lastLocation.y) ||
+      operationState === SWIPE_STARTED) &&
+    operationState !== SCROLL_STARTED
+  ) {
+    element.style.transform = translation + rotation;
+    return [newLocation, SWIPE_STARTED];
+  }
+  if (
     Math.abs(coordinates.y + offset.y - lastLocation.y) > 0 &&
     operationState !== SWIPE_STARTED
   ) {
     return [lastLocation, SCROLL_STARTED];
   }
-  if (
-    Math.abs(newLocation.x - lastLocation.x) >
-      Math.abs(coordinates.y + offset.y - lastLocation.y) ||
-    operationState === SWIPE_STARTED
-  ) {
-    element.style.transform = translation + rotation;
-    return [newLocation, SWIPE_STARTED];
-  }
-  return [lastLocation, NOOP];
+
+  return [lastLocation, operationState];
 };
 
 const touchCoordinatesFromEvent = (e) => {
@@ -215,7 +217,6 @@ const TinderCard = React.forwardRef(
           return;
         }
         swipeAlreadyReleased.current = true;
-        operationInProgress.current = NOOP;
 
         // Check if this is a swipe
         if (
@@ -285,7 +286,7 @@ const TinderCard = React.forwardRef(
         } else if (operationInProgress.current === SWIPE_STARTED) {
           ev.preventDefault();
         }
-
+        ev.preventDefault();
         const [newLocation, operationState] = dragableTouchmove(
           touchCoordinatesFromEvent(ev),
           element.current,
@@ -315,8 +316,11 @@ const TinderCard = React.forwardRef(
       });
 
       element.current.addEventListener("touchend", (ev) => {
-        ev.preventDefault();
-        handleSwipeReleased(element.current, speed);
+        if (operationInProgress.current === SWIPE_STARTED) {
+          ev.preventDefault();
+          handleSwipeReleased(element.current, speed);
+        }
+        operationInProgress.current = NOOP;
       });
 
       element.current.addEventListener("mouseup", (ev) => {
