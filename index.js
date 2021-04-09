@@ -286,7 +286,7 @@ const TinderCard = React.forwardRef(
         } else if (operationInProgress.current === SWIPE_STARTED) {
           ev.preventDefault();
         }
-        ev.preventDefault();
+        //ev.preventDefault(); commented to enable scrolling on ios devices
         const [newLocation, operationState] = dragableTouchmove(
           touchCoordinatesFromEvent(ev),
           element.current,
