@@ -13,6 +13,30 @@ const SCROLL_STARTED = "scrollStarted";
 const SWIPE_STARTED = "swipeStarted";
 const NOOP = "noop";
 
+const getOverlayColor = (pos, xDiff) => {
+  if (pos.x > 0) {
+    return (
+      "rgba(0," +
+      "255," +
+      "0," +
+      Math.abs(window.innerWidth - (window.innerWidth - pos.x)) /
+        window.innerWidth +
+      ")"
+    );
+  } else if (pos.x < 0) {
+    return (
+      "rgba(255," +
+      "0," +
+      "0," +
+      Math.abs(window.innerWidth - (window.innerWidth - pos.x)) /
+        window.innerWidth +
+      ")"
+    );
+  }
+
+  return "rgba(0,0,0,0)";
+};
+
 const getElementSize = (element) => {
   const elementStyles = window.getComputedStyle(element);
   const widthString = elementStyles.getPropertyValue("width");
@@ -62,11 +86,12 @@ const animateOut = async (element, speed, easeIn = false) => {
   }
 
   element.style.transform = translateString + rotateString;
+  overlayDiv.style.backgroundColor = "rgba(0,0,0,0)";
 
   await sleep(time * 1000);
 };
 
-const animateBack = (element) => {
+const animateBack = (element, overlayElement) => {
   element.style.transition = settings.snapBackDuration + "ms";
   const startingPoint = getTranslate(element);
   const translation = translationString(
@@ -75,6 +100,7 @@ const animateBack = (element) => {
   );
   const rotation = rotationString(getRotation(element) * -settings.bouncePower);
   element.style.transform = translation + rotation;
+  overlayElement.style.backgroundColor = "rgba(0,0,0,0)";
 
   setTimeout(() => {
     element.style.transform = "none";
@@ -82,6 +108,7 @@ const animateBack = (element) => {
 
   setTimeout(() => {
     element.style.transition = "10ms";
+    overlayElement.style.transition = "10ms";
   }, settings.snapBackDuration);
 };
 
@@ -129,7 +156,8 @@ const dragableTouchmove = (
   element,
   offset,
   lastLocation,
-  operationState
+  operationState,
+  overlayElement
 ) => {
   const pos = {
     x: coordinates.x + offset.x,
@@ -146,6 +174,10 @@ const dragableTouchmove = (
     operationState !== SCROLL_STARTED
   ) {
     element.style.transform = translation + rotation;
+    overlayElement.style.backgroundColor = getOverlayColor(
+      pos,
+      newLocation.x - lastLocation.x
+    );
     return [newLocation, SWIPE_STARTED];
   }
   if (
@@ -183,6 +215,7 @@ const TinderCard = React.forwardRef(
     const operationInProgress = React.useRef(NOOP);
 
     const element = React.useRef();
+    const overlayElement = React.useRef();
 
     React.useImperativeHandle(ref, () => ({
       async swipe(dir = "right") {
@@ -212,7 +245,7 @@ const TinderCard = React.forwardRef(
     }));
 
     const handleSwipeReleased = React.useCallback(
-      async (element, speed) => {
+      async (element, overlayElement, speed) => {
         if (swipeAlreadyReleased.current) {
           return;
         }
@@ -224,7 +257,6 @@ const TinderCard = React.forwardRef(
           Math.abs(speed.y) > settings.swipeThreshold
         ) {
           const dir = getSwipeDirection(speed);
-
           if (onSwipe) onSwipe(dir);
 
           if (flickOnSwipe) {
@@ -238,7 +270,7 @@ const TinderCard = React.forwardRef(
         }
 
         // Card was not flicked away, animate back to start
-        animateBack(element);
+        animateBack(element, overlayElement);
       },
       [
         swipeAlreadyReleased,
@@ -292,7 +324,8 @@ const TinderCard = React.forwardRef(
           element.current,
           offset,
           lastLocation,
-          operationInProgress.current
+          operationInProgress.current,
+          overlayElement.current
         );
         speed = calcSpeed(lastLocation, newLocation);
         lastLocation = newLocation;
@@ -307,7 +340,8 @@ const TinderCard = React.forwardRef(
             element.current,
             offset,
             lastLocation,
-            operationInProgress.current
+            operationInProgress.current,
+            overlayElement.current
           );
           speed = calcSpeed(lastLocation, newLocation);
           lastLocation = newLocation;
@@ -318,7 +352,7 @@ const TinderCard = React.forwardRef(
       element.current.addEventListener("touchend", (ev) => {
         if (operationInProgress.current === SWIPE_STARTED) {
           ev.preventDefault();
-          handleSwipeReleased(element.current, speed);
+          handleSwipeReleased(element.current, overlayElement.current, speed);
         }
         operationInProgress.current = NOOP;
       });
@@ -340,7 +374,25 @@ const TinderCard = React.forwardRef(
       });
     }, []);
 
-    return React.createElement("div", { ref: element, className }, children);
+    const overlayDiv = React.createElement("div", {
+      className: "blaaaa",
+      ref: overlayElement,
+      style: {
+        backgroundColor: "rgba(0,255,0,0)",
+        height: "100%",
+        width: "100%",
+        position: "absolute",
+        zIndex: 99,
+        pointerEvents: "none",
+      },
+    });
+
+    return React.createElement(
+      "div",
+      { ref: element, className },
+      overlayDiv,
+      children
+    );
   }
 );
 
