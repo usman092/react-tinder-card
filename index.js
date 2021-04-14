@@ -50,7 +50,7 @@ const pythagoras = (x, y) => {
   return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
 };
 
-const animateOut = async (element, speed, easeIn = false) => {
+const animateOut = async (element, speed, overlayDiv, easeIn = false) => {
   const startPos = getTranslate(element);
   const bodySize = getElementSize(document.body);
   const diagonal = pythagoras(bodySize.x, bodySize.y);
@@ -223,7 +223,12 @@ const TinderCard = React.forwardRef(
         const power = 1000;
         const disturbance = (Math.random() - 0.5) * 100;
         if (dir === "right") {
-          await animateOut(element.current, { x: power, y: disturbance }, true);
+          await animateOut(
+            element.current,
+            { x: power, y: disturbance },
+            overlayElement.current,
+            true
+          );
         } else if (dir === "left") {
           await animateOut(
             element.current,
@@ -231,11 +236,17 @@ const TinderCard = React.forwardRef(
             true
           );
         } else if (dir === "up") {
-          await animateOut(element.current, { x: disturbance, y: power }, true);
+          await animateOut(
+            element.current,
+            { x: disturbance, y: power },
+            overlayElement.current,
+            true
+          );
         } else if (dir === "down") {
           await animateOut(
             element.current,
             { x: disturbance, y: -power },
+            overlayElement.current,
             true
           );
         }
@@ -261,7 +272,7 @@ const TinderCard = React.forwardRef(
 
           if (flickOnSwipe) {
             if (!preventSwipe.includes(dir)) {
-              await animateOut(element, speed);
+              await animateOut(element, speed, overlayElement);
               element.style.display = "none";
               if (onCardLeftScreen) onCardLeftScreen(dir);
               return;
